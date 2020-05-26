@@ -1,0 +1,115 @@
+/** Copyright (C) 2019,  Gavin J Stark.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @file  tb_de1_hps_generic.cdl
+ * @brief Generic testbench for DE1 HPS
+ *
+ */
+/*a Includes */
+include "types/ethernet.h"
+include "boards/vcu108.h"
+include "boards/vcu108/vcu108_generic.h"
+
+/*a Modules */
+/*m extern for se_test_harness with extra connections */
+extern
+module se_test_harness(clock clk,
+                       input bit reset_n,
+                       output t_vcu108_inputs vcu108_inputs,
+                       output t_dprintf_req_4 vcu108_dprintf_req,
+                       input t_vcu108_outputs vcu108_outputs,
+                       input t_adv7511 vcu108_video
+    )
+{
+    timing from rising clock clk vcu108_inputs, vcu108_dprintf_req;
+    timing to   rising clock clk vcu108_outputs, vcu108_video;
+}
+
+/*m tb_vcu108_generic */
+module tb_vcu108_generic( clock clk,
+                          clock clk_50,
+                          clock video_clk,
+                          clock flash_clk,
+                          clock sgmii_tx_clk,
+                          clock sgmii_rx_clk,
+                          input bit reset_n
+)
+{
+
+    /*b Nets */
+    net t_vcu108_inputs  vcu108_inputs;
+    net t_vcu108_outputs vcu108_outputs;
+    net t_dprintf_req_4 vcu108_dprintf_req;
+
+    net t_adv7511 vcu108_video;
+    default clock flash_clk;
+    default reset active_low reset_n;
+    clocked t_mem_flash_in flash_in={*=0};
+    net bit[4] sgmii_txd;
+    net     t_sgmii_transceiver_control sgmii_transceiver_control;
+    clocked t_sgmii_transceiver_status  sgmii_transceiver_status ={*=0};
+
+    /*b Instantiations */
+    instantiations: {
+        se_test_harness th(  clk <- clk,
+                             reset_n <= reset_n,
+
+                             vcu108_dprintf_req => vcu108_dprintf_req,
+                             vcu108_inputs   => vcu108_inputs,
+                             vcu108_outputs  <= vcu108_outputs,
+
+                             vcu108_video <= vcu108_video
+
+            );
+        
+        vcu108_generic dut(  clk <- clk,
+                             clk_50 <- clk_50,
+                             reset_n <= reset_n,
+
+                             vcu108_dprintf_req <= vcu108_dprintf_req,
+                             vcu108_inputs  <= vcu108_inputs,
+                             vcu108_outputs => vcu108_outputs,
+
+                             video_clk <- video_clk,
+                             video_reset_n <= reset_n,
+                             vcu108_video => vcu108_video,
+
+                             sgmii_tx_clk      <- sgmii_tx_clk,
+                             sgmii_tx_reset_n  <= reset_n,
+                             sgmii_txd         => sgmii_txd,
+
+                             sgmii_rx_clk      <- sgmii_rx_clk,
+                             sgmii_rx_reset_n  <= reset_n,
+                             sgmii_rxd         <= sgmii_txd,
+                             sgmii_transceiver_control => sgmii_transceiver_control,
+                             sgmii_transceiver_status <= sgmii_transceiver_status,
+
+                             flash_clk <- flash_clk,
+                             flash_in <= flash_in
+
+            );
+        sgmii_transceiver_status <= {*=0};
+        flash_in <= {*=0};
+
+    }
+
+    /*b All done */
+}
+
+/*a Editor preferences and notes
+mode: c ***
+c-basic-offset: 4 ***
+c-default-style: (quote ((c-mode . "k&r") (c++-mode . "k&r"))) ***
+outline-regexp: "/\\\*a\\\|[\t ]*\/\\\*[b-z][\t ]" ***
+*/
